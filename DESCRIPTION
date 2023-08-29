@@ -1,0 +1,13 @@
+Package: DataflowR2023
+Title: Toolbox for Processing and Viewing Underway Dataflow Output
+Description: Functions are provided to clean, aggregate, and plot Dataflow
+    output.
+Version: 2.0
+Date: 2023-24-07
+Author: Kira Allen (kiallen@sfwmd.gov), Jemma Stachelek <stachel2@msu.edu>
+Maintainer: Kira Allen <kiallen@sfwmd.gov>
+Imports:methods, rgeos, gdata, ipdw, raster, sf, sp, MASS, car, latticeExtra, maptools, rasterVis, rgdal, rgrass7, viridis
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3.9000
