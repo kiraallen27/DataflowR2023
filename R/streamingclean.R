@@ -382,12 +382,14 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
   for (i in contributing_streams) {
     dt <- merge(dt, eval(as.symbol(i)), all.x = TRUE)
   }
+  
   detect_coord_names <- function(x) {
     lat_name <- names(x)[grep("lat", names(x))]
     lon_name <- names(x)[grep("lon", names(x))]
     c(lat_name, lon_name)
   }
   coord_names <- detect_coord_names(eval(as.symbol(gps)))
+  #need to manually enter coord_names (lon_dd, lat_dd) for streamparse data
   create_basin_labels <- function(dt, coord_names) {
     projstr <- "+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
     latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -683,6 +685,47 @@ fluor,chla",sep=",")
   #ensure that data columns are numeric
   parset<-c("chla","temp","cond","sal","trans","cdom","brighteners","phycoe","phycoc","c6chla","c6cdom","c6turbidity","c6temp")
   dt[,parset]<-suppressWarnings(apply(dt[,parset],2,function(x) as.numeric(x)))
+  
+  ####Added to give some of older files gridcode that were missing it before (may result in some duplicate columns)####
+  detect_coord_names <- function(x) {
+    lat_name <- names(x)[grep("lat", names(x))]
+    lon_name <- names(x)[grep("lon", names(x))]
+    c(lat_name, lon_name)
+  }
+  
+  coord_names <- detect_coord_names(dt)
+  
+  create_basin_labels <- function(dt, coord_names) {
+    projstr <- "+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+    latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+    fathombasins <- rgdal::readOGR(file.path(fdir, "DF_Basefile/fathom_basins_proj_updated/fathom_basins_proj_updated.shp"), 
+                                   layer = "fathom_basins_proj_updated", verbose = FALSE)
+    cerpbasins <- rgdal::readOGR(file.path(fdir, "DF_Basefile/fbfs_zones.shp"), 
+                                 layer = "fbfs_zones", verbose = FALSE)
+    selectiongrid <- rgdal::readOGR(file.path(fdir, "DF_Basefile/testgrid9/testgrid9.shp"), 
+                                    layer = "testgrid9", verbose = FALSE)
+    xy <- cbind(dt[, coord_names[2]], dt[, coord_names[1]])
+    xy <- data.frame(xy)
+    fulldataset <- coordinatize(dt, latname = coord_names[1], 
+                                lonname = coord_names[2])
+    fulldataset.over <- sp::over(fulldataset, selectiongrid)
+    fulldataset.over2 <- sp::over(fulldataset, fathombasins[, 
+                                                            1:2])
+    fulldataset.over3 <- sp::over(fulldataset, cerpbasins[, 
+                                                          2])
+    fulldataset.over <- cbind(data.frame(fulldataset), data.frame(fulldataset.over), 
+                              data.frame(fulldataset.over2), data.frame(fulldataset.over3))
+    fulldataset.over$lon_dd <- xy[, 1]
+    fulldataset.over$lat_dd <- xy[, 2]
+    fulldataset.over[, names(fulldataset.over) != "NA."]
+  }
+  dt <- create_basin_labels(dt, coord_names)
+  names(dt) <- tolower(names(dt))
+  
+  
+  if (all(is.na(dt$gridcode))==TRUE) {
+    dt$gridcode <- dt$gridcode.1
+  }
   
   if(tofile==TRUE){
     #add check to verify yearmon before overwriting
