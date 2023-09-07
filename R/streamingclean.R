@@ -14,6 +14,8 @@
 #'@importFrom rgdal readOGR
 #'@importFrom zoo zoo na.approx
 #'@importFrom sp coordinates CRS spTransform
+#'@importFrom sf read_sf
+#'@importFrom methods as
 #'@details Dataflow cleaning drops all minutes that have less measurements than "mmin". C6 data is interpolated to match Dataflow.  Automatically compares salinity against conducitivty/temperature recalculated salinity and replaces if slope of fit is not close to 1. Bad DO columns must sometimes be removed manually. TODO - Add check the make sure that the year of the data (not just the filename) matches the year of yearmon
 #'@examples \dontrun{
 #'#old
@@ -382,21 +384,30 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
   for (i in contributing_streams) {
     dt <- merge(dt, eval(as.symbol(i)), all.x = TRUE)
   }
+  
   detect_coord_names <- function(x) {
     lat_name <- names(x)[grep("lat", names(x))]
     lon_name <- names(x)[grep("lon", names(x))]
     c(lat_name, lon_name)
   }
   coord_names <- detect_coord_names(eval(as.symbol(gps)))
+  #need to manually enter coord_names (lon_dd, lat_dd) for streamparse data
   create_basin_labels <- function(dt, coord_names) {
     projstr <- "+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
     latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-    fathombasins <- rgdal::readOGR(file.path(fdir, "DF_Basefile/fathom_basins_proj_updated/fathom_basins_proj_updated.shp"), 
-                                   layer = "fathom_basins_proj_updated", verbose = FALSE)
-    cerpbasins <- rgdal::readOGR(file.path(fdir, "DF_Basefile/fbfs_zones.shp"), 
-                                 layer = "fbfs_zones", verbose = FALSE)
-    selectiongrid <- rgdal::readOGR(file.path(fdir, "DF_Basefile/testgrid9/testgrid9.shp"), 
-                                    layer = "testgrid9", verbose = FALSE)
+    #### Added to make sure CRS were compatible ###
+    fathombasins <- sf::read_sf(file.path(fdir, "DF_Basefile/fathom_basins_proj_updated/fathom_basins_proj_updated.shp"))
+    cerpbasins <- sf::read_sf(file.path(fdir, "DF_Basefile/fbfs_zones.shp"))
+    selectiongrid <- sf::read_sf(file.path(fdir, "DF_Basefile/testgrid9/testgrid9.shp"))
+    
+    fathombasins <- as(fathombasins, "Spatial")
+    cerpbasins <- as(cerpbasins, "Spatial")
+    selectiongrid <- as(selectiongrid, "Spatial")
+    
+    fathombasins <- sp::spTransform(fathombasins, projstr)
+    cerpbasins <- sp::spTransform(cerpbasins, projstr)
+    selectiongrid <- sp::spTransform(selectiongrid, projstr)
+    #######################################################
     xy <- cbind(dt[, coord_names[2]], dt[, coord_names[1]])
     xy <- data.frame(xy)
     fulldataset <- coordinatize(dt, latname = coord_names[1], 
@@ -599,6 +610,9 @@ streamqa <- function(yearmon, parset = NA, setthresh = TRUE, trimends = FALSE, p
 #'@param tofile logical save to file?
 #'@param fdir character file path to local data directory
 #'@export
+#'@importFrom sp spTransform over
+#'@importFrom sf read_sf
+#'@importFrom methods as
 #'@examples \dontrun{dt<-streamparse(yearmon=201002)}
 
 streamparse<-function(yearmon,tofile=FALSE,fdir=getOption("fdir")){
@@ -683,6 +697,54 @@ fluor,chla",sep=",")
   #ensure that data columns are numeric
   parset<-c("chla","temp","cond","sal","trans","cdom","brighteners","phycoe","phycoc","c6chla","c6cdom","c6turbidity","c6temp")
   dt[,parset]<-suppressWarnings(apply(dt[,parset],2,function(x) as.numeric(x)))
+  
+  ####Added to give some of older files gridcode that were missing it before (may result in some duplicate columns)####
+  detect_coord_names <- function(x) {
+    lat_name <- names(x)[grep("lat", names(x))]
+    lon_name <- names(x)[grep("lon", names(x))]
+    c(lat_name, lon_name)
+  }
+  
+  coord_names <- detect_coord_names(dt)
+  
+  create_basin_labels <- function(dt, coord_names) {
+    projstr <- "+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+    latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+    #### Added to make sure CRS were compatible ###
+    fathombasins <- sf::read_sf(file.path(fdir, "DF_Basefile/fathom_basins_proj_updated/fathom_basins_proj_updated.shp"))
+    cerpbasins <- sf::read_sf(file.path(fdir, "DF_Basefile/fbfs_zones.shp"))
+    selectiongrid <- sf::read_sf(file.path(fdir, "DF_Basefile/testgrid9/testgrid9.shp"))
+    
+    fathombasins <- as(fathombasins, "Spatial")
+    cerpbasins <- as(cerpbasins, "Spatial")
+    selectiongrid <- as(selectiongrid, "Spatial")
+    
+    fathombasins <- sp::spTransform(fathombasins, projstr)
+    cerpbasins <- sp::spTransform(cerpbasins, projstr)
+    selectiongrid <- sp::spTransform(selectiongrid, projstr)
+    #######################################################
+    xy <- cbind(dt[, coord_names[2]], dt[, coord_names[1]])
+    xy <- data.frame(xy)
+    fulldataset <- coordinatize(dt, latname = coord_names[1], 
+                                lonname = coord_names[2])
+    fulldataset.over <- sp::over(fulldataset, selectiongrid)
+    fulldataset.over2 <- sp::over(fulldataset, fathombasins[, 
+                                                            1:2])
+    fulldataset.over3 <- sp::over(fulldataset, cerpbasins[, 
+                                                          2])
+    fulldataset.over <- cbind(data.frame(fulldataset), data.frame(fulldataset.over), 
+                              data.frame(fulldataset.over2), data.frame(fulldataset.over3))
+    fulldataset.over$lon_dd <- xy[, 1]
+    fulldataset.over$lat_dd <- xy[, 2]
+    fulldataset.over[, names(fulldataset.over) != "NA."]
+  }
+  dt <- create_basin_labels(dt, coord_names)
+  names(dt) <- tolower(names(dt))
+  
+  
+  if (all(is.na(dt$gridcode))==TRUE) {
+    dt$gridcode <- dt$gridcode.1
+  }
   
   if(tofile==TRUE){
     #add check to verify yearmon before overwriting
