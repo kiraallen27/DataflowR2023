@@ -59,6 +59,8 @@ chlmap(yearmon = 201502)
 ######
 # Resource for uploading/synching package to github:
 # https://pjnewcombe.wordpress.com/2014/05/31/using-rstudio-to-create-and-maintain-an-r-package-on-github/#:~:text=Using%20RStudio%20to%20create%20and%20maintain%20an%20R,future%20additions%2Fedits%20to%20github%2C%20from%20within%20RStudio%20
+# https://hansenjohnson.org/post/sync-github-repository-with-existing-r-project/
+
 
 #need to install Git on computer in order to link R project with github repo
 
