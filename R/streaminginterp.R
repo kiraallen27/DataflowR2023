@@ -22,7 +22,7 @@ rraster <- methods::setClass("rraster", contains="RasterStack", slots=c(range="n
 #'@param costrasname character file.path to cost raster
 #'
 #' @export
-#' @importFrom raster raster writeRaster mask stack
+#' @importFrom raster raster writeRaster mask stack crs
 #' @importFrom gdata resample
 #' @importFrom sp SpatialPointsDataFrame coordinates CRS spTransform proj4string
 #' @importFrom sf st_as_sf
@@ -43,6 +43,7 @@ streaminterp<- function (dt, paramlist, yearmon, trim_rstack = TRUE, trim_negati
   latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
   costras <- raster::raster(file.path(fdir, "DF_Basefile", "CostRas_Optimize_Clip.tif",
                                       costrasname))
+  raster::crs(costras)<- projstr
   paramlist <- tolower(paramlist)
   names(dt) <- tolower(names(dt))
   if (!all(paramlist %in% names(dt))) {
@@ -90,8 +91,7 @@ streaminterp<- function (dt, paramlist, yearmon, trim_rstack = TRUE, trim_negati
     training <- sp::SpatialPointsDataFrame(xy, training)
     write.csv(training, tname)
     write.csv(validate, vname)
-  }
-  else {
+  } else {
     warning("using previously defined subset")
     training <- read.csv(tname, sep = ",")
     sp::coordinates(training) <- c("lon_dd", "lat_dd")
