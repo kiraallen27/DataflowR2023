@@ -69,9 +69,17 @@ surfplot <- function(rnge = c(201402, 201404), params = c("c6chl", "sal"), fdir 
   for(i in 1:length(rlist)){
     #i<-1
     
-    my.at <- unlist(eval(parse(text = as.character(brks[which(plist[i] == brks[,1]), 2]))))
-      
-    print(rasterVis::levelplot(raster::raster(rlist[i]),ylim =yext, xlim = xext,par.settings=rasterVis::BuRdTheme(),at=my.at,margin=FALSE,auto.key=FALSE,scales=list(draw=FALSE),main=paste(as.character(plist[i]),unlist(strsplit(rlist[i],"/"))[length(unlist(strsplit(rlist[i],"/")))-1]))+latticeExtra::layer({sp::SpatialPolygonsRescale(sp::layout.north.arrow(),offset=c(563000,2775000),scale=4400)})+ latticeExtra::layer(sp::sp.polygons(rgdal::readOGR(dsn = file.path(getOption("fdir"), "DF_Basefile", "FBcoast_big", "FBcoast_big.shp"), layer = "FBcoast_big", verbose = TRUE), fill="seagreen",alpha=0.6)))
+    #Old
+    #my.at <- unlist(eval(parse(text = as.character(brks[which(plist[i] == brks[,1]), 2]))))
+    #print(rasterVis::levelplot(raster::raster(rlist[i]),ylim =yext, xlim = xext,par.settings=rasterVis::BuRdTheme(),at=my.at,margin=FALSE,auto.key=FALSE,scales=list(draw=FALSE),main=paste(as.character(plist[i]),unlist(strsplit(rlist[i],"/"))[length(unlist(strsplit(rlist[i],"/")))-1]))+latticeExtra::layer({sp::SpatialPolygonsRescale(sp::layout.north.arrow(),offset=c(563000,2775000),scale=4400)})+ latticeExtra::layer(sp::sp.polygons(rgdal::readOGR(dsn = file.path(getOption("fdir"), "DF_Basefile", "FBcoast_big", "FBcoast_big.shp"), layer = "FBcoast_big", verbose = TRUE), fill="seagreen",alpha=0.6)))
+    
+    #New
+    r <- raster::raster(rlist[i])
+    ymin <- r@extent[3]
+    ymax <- r@extent[4]
+    xmin <- r@extent[1]
+    xmax <- r@extent[2]
+    print(rasterVis::levelplot(r,ylim=c(ymin, ymax), xlim=c(xmin, xmax),par.settings=rasterVis::BuRdTheme(),margin=FALSE,auto.key=FALSE,scales=list(draw=FALSE),main=paste(as.character(plist[i]),unlist(strsplit(rlist[i],"/"))[length(unlist(strsplit(rlist[i],"/")))-1]))+latticeExtra::layer({sp::SpatialPolygonsRescale(sp::layout.north.arrow(),offset=c(563000,2775000),scale=4400)})+ latticeExtra::layer(sp::sp.polygons(rgdal::readOGR(dsn = file.path(getOption("fdir"), "DF_Basefile", "FBcoast_big", "FBcoast_big.shp"), layer = "FBcoast_big", verbose = TRUE), fill="seagreen",alpha=0.6)))
     
     }
 }
