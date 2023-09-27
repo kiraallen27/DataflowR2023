@@ -283,7 +283,7 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
     return(eu)
   }
   read_exo <- function(exopath) {
-    exo <- read.csv(exopath, header = T, skip = 12, stringsAsFactors = FALSE)
+    exo <- read.csv(exopath, header = T, skip = 15, stringsAsFactors = FALSE)
     if (substring(names(exo)[1], 1, 4) != "Date") {
       exo <- read.csv(exopath, header = T, skip = 24, 
                       stringsAsFactors = FALSE)
@@ -299,9 +299,11 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
                                         format = "%m/%d/%Y %H:%M:%S"))
     exo$sec <- strftime(exo$datetime, "%S")
     exo <- exo[which(!duplicated(exo$datetime)), ]
-    exo[, "longitudedegrees"] <- exo[, "longitudedegrees"] * 
-      -1
-    exo <- exo[exo$latitudedegrees > 24, ]
+    if (any(exo[, "lon"] > 0)==TRUE) {
+      exo[, "lon"] <- exo[, "lon"] * 
+        -1
+    }
+    exo <- exo[exo$lat > 24, ]
     exo
   }
   if (!is.na(dfmmin)) {
@@ -352,6 +354,14 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
                                   1))
     names(dt_zoo_full) <- "datetime"
     dt_zoo_full <- zoo::zoo(dt_zoo_full, dt_zoo_full$datetime)
+    #New code to remove any duplicate rows
+    if (any(duplicated(dt_zoo$datetime)==TRUE)) {
+      dt_zoo <- dt_zoo[-c(anyDuplicated(dt_zoo$datetime)),]
+    }
+    if (any(duplicated(dt_zoo_full$datetime)==TRUE)) {
+      dt_zoo_full <- dt_zoo_full[-c(anyDuplicated(dt_zoo_full$datetime)),]
+    }
+    ##
     dt_zoo_full <- merge(dt_zoo_full, dt_zoo)
     dt_zoo_full <- dt_zoo_full[min(which(!is.na(dt_zoo_full[, 
                                                             2]))):max(which(!is.na(dt_zoo_full[, 2]))), ]
