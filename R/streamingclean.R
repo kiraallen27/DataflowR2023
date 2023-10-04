@@ -232,16 +232,31 @@ streamclean <- function (yearmon, gps, dfmmin = NA, c6mmin = NA, eummin = NA,
     read.csv(c6path, skip = 12, header = F)[, 1:9]
   }
   clean_c6 <- function(c6) {
-    names(c6) <- c("datetime", "c6chlaR", "phycoe", 
-                   "phycoc", "c6chla", "c6cdom", "c6turbidity", "depth", 
-                   "c6temp")
-    if (!any(!is.na(c6[, "c6temp"]))) {
-      c6 <- c6[, -9]
-      names(c6)[8] <- "c6temp"
+    #Added below because newer c6 has parameters listed in different order
+    if (yearmon > 202301) {
+      if (length(which(colnames(c6)!= "NA"))==9) {
+        #if depth is left in
+        names(c6) <- c("datetime", "c6chla", "c6chlaR", "phycoe", "phycoc",
+                       "c6cdom", "c6turbidity", "depth", "c6temp") 
+      } else {
+        #if depth column is removed
+        names(c6) <- c("datetime", "c6chla", "c6chlaR", "phycoe", "phycoc",
+                       "c6cdom", "c6turbidity", "c6temp") 
+      }
+    } else { 
+      #for data pre-202301
+      names(c6) <- c("datetime", "c6chlaR", "phycoe", 
+                     "phycoc", "c6chla", "c6cdom", "c6turbidity", "depth", 
+                     "c6temp")
+      if (!any(!is.na(c6[, "c6temp"]))) {
+        c6 <- c6[, -9]
+        names(c6)[8] <- "c6temp"
+      }
+      else {
+        c6 <- c6[, -8]
+      }
     }
-    else {
-      c6 <- c6[, -8]
-    }
+    
     if (all(is.na(as.POSIXct(strptime(c6$datetime, "%m/%d/%y %H:%M:%S"))))) {
       c6sec <- unlist(lapply(rle(sapply(c6$datetime, function(x) strftime(strptime(x, 
                                                                                    format = "%m/%d/%Y %H:%M"), format = "%M")))$lengths, 
