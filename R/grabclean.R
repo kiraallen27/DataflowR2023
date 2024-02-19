@@ -343,6 +343,12 @@ n+num,n.num", sep = ",")
     
     nonna_dt_names <- which(!is.na(dt[,"lon_dd"]) & !is.na(dt[,"lat_dd"])) 
     dt_over <- coordinatize(dt, latname = "lat_dd", lonname = "lon_dd")
+    
+    ###Added###
+    projstr <- fathombasins@proj4string@projargs
+    dt_over <- sp::spTransform(dt_over, projstr)
+    ############
+    
     dt_over <- sp::over(dt_over, fathombasins)
     
     
