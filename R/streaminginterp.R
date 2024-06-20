@@ -20,6 +20,7 @@ rraster <- methods::setClass("rraster", contains="RasterStack", slots=c(range="n
 #'@param missprop numeric proportion of missing data allowed. Variables with a greater proportion of missing data will be dropped.
 #'@param fdir character file path to local data directory
 #'@param costrasname character file.path to cost raster
+#'@param range interpolation range
 #'
 #' @export
 #' @importFrom raster raster writeRaster mask stack crs
@@ -37,7 +38,7 @@ rraster <- methods::setClass("rraster", contains="RasterStack", slots=c(range="n
 
 streaminterp<- function (dt, paramlist, yearmon, trim_rstack = TRUE, trim_negative = TRUE,
                          costrasname = "CostRas_Optimize_Clip.tif", tname = NA, vname = NA,
-                         missprop = 0.16, fdir = getOption("fdir"))
+                         missprop = 0.16, range=3750, fdir = getOption("fdir"))
 {
   projstr <- "+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
   latlonproj <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -99,7 +100,7 @@ streaminterp<- function (dt, paramlist, yearmon, trim_rstack = TRUE, trim_negati
   sp::proj4string(training) <- sp::CRS(latlonproj)
   training <- sp::spTransform(training, sp::CRS(projstr))
   training <- sf::st_as_sf(training) ###Addedd to resolve training not being a class sf object
-  rstack <- ipdw::pathdistGen(training, costras, 100000, yearmon = yearmon)
+  rstack <- ipdw::pathdistGen(training, costras, range=range, yearmon = yearmon)
   if (trim_rstack == TRUE) {
     rstack <- raster::mask(rstack, rgeos::gConvexHull(coordinatize(streamget(yearmon),
                                                                    latname = "lat_dd", lonname = "lon_dd")), inverse = FALSE)
@@ -109,7 +110,7 @@ streaminterp<- function (dt, paramlist, yearmon, trim_rstack = TRUE, trim_negati
   for (j in 1:length(paramlist)) {
     #rraster <- methods::setClass("rraster", contains="RasterStack", slots=c(range="numeric")) ###This and two lines below added to add range slot to rstack
     rstack <- as(rstack, "rraster") ###Added
-    rstack@range <- 100000 ###Added
+    rstack@range <- range ###Added
     finalras <- ipdw::ipdwInterp(training, rstack, paramlist[j],
                                  overlapped = TRUE, yearmon = yearmon)
     if (trim_negative) {

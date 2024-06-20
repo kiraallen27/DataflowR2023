@@ -29,7 +29,11 @@ chlmap <- function(yearmon, remove.flags = TRUE, stream.qa = TRUE, fdir = getOpt
     stop("No chl model fit for this survey")
   }
   
-  coeflist <- coeflist[coeflist$yearmon == yearmon, 4:16]
+  coeflist <- coeflist[coeflist$yearmon == yearmon, 4:which(colnames(coeflist)=="intercept")]
+  #if duplicate models, use most recent one
+  if (nrow(coeflist) > 1) {
+    coeflist <- coeflist[nrow(coeflist),]
+  }
   namelist <- names(coeflist)[which(!is.na(coeflist))]
   coeflist <- coeflist[!is.na(coeflist)]
   namelist_sq <- namelist[grep("2", namelist)]

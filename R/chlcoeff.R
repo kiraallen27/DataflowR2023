@@ -39,11 +39,12 @@ if(logtransform == TRUE){
 
   #choose variables
   if(all(is.na(varlist))){
-    varlist <- c("chla", "cdom", "chlaiv", "phycoe", "c6chl", "phycoc", "c6cdom")
+    varlist1 <- c("chla", "cdom", "chlaiv", "phycoe", "c6chl", "phycoc", "c6cdom")
   }else{
-    varlist <- c("chla", varlist)
+    varlist1 <- c("chla", varlist)
   }
-  
+
+  varlist <- varlist1[which(varlist1 %in% names(dt))]
   varlist <- varlist[sapply(varlist, function(x) sum(!is.na(dt[,x])) > 1)]
 
 #exclude variables with streaming data less than streamcov
@@ -226,7 +227,7 @@ lmp <- function (modelobject) {
 
 outtemp[,"pvalue"] <- lmp(fit)
 
-model <- outtemp[4:17] #Modified: Used to be 4:16, but new column must've been added in at some point, 4:17 includes intercept
+model <- outtemp[4:which(colnames(outtemp)=="intercept")] #Modified: Used to be 4:16, but new column must've been added in at some point, 4:17 includes intercept
 model[1,]<-round(as.numeric(model[1,]),5)
 model<-data.frame(matrix(c(model,names(model)),nrow=2,byrow=TRUE))
 model<-model[,!is.na(model[1,])]
